@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/128/6928/6928387.png">
+<title>Multi-Encoding Encoder/Decoder</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #111827;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+  }
+
+  body {
+    margin: 0;
+    font-family: sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 95vh;
+    padding: 20px;
+    background-image: url('like.webp');
+  }
+
+  .card {
+    background: translucent;
+    color: #ffffff;
+    text-shadow: 0 0 10px black, 0 0 20px black;
+    padding: 20px;
+    border-radius: 16px;
+    width: min(900px, 100%);
+    border-radius: 1rem;
+    box-shadow: 0 5px 10px black;
+    transition: transform 0.2s ease-in-out;
+  }
+  .card:hover
+  {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(20px, 3vw, 28px);
+  }
+
+  textarea {
+    width: 95%;
+    height: 140px;
+    border-radius: 10px;
+    border: 1px solid #374151;
+    background: #f2f3f4;
+    color: black;
+    padding: 12px;
+    font-family: monospace;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .btn {
+    border: 1px solid #334155;
+    background: #f2f3f4;
+    color: #000;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .btn.active {
+    background: linear-gradient(to right, black, white);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    color: #fff;
+  }
+
+  .out {
+    background: #f2f3f4;
+    border: 1px solid #374151;
+    text-shadow: 0 0 0px black, 0 0 0px black;
+    color: black;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: monospace;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  select {
+    background: #f2f3f4;
+    color: #000;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+      .credit {
+      position: fixed;
+      bottom: -15px;        /* Distance from bottom */
+      right: 15px;         /* Distance from right */
+      font-size: 16px;
+      font-style: italic;
+      color: #fff;
+      text-shadow:
+        0 0 5px #000,
+        0 0 10px #000,
+        0 0 20px #000,
+        0 0 40px #000;
+      margin-bottom: 30px;
+      animation: flicker 3s infinite alternate;
+      font-family: Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Encoder / Decoder</h1>
+
+    <div class="row">
+      <button class="btn active" id="mode-encode">Encode</button>
+      <button class="btn" id="mode-decode">Decode</button>
+      <select id="encoding">
+        <option value="utf-8">UTF-8</option>
+        <option value="windows-1251">Windows-1251</option>
+        <option value="windows-1252">Windows-1252</option>
+        <option value="windows-1254">Windows-1254</option>
+      </select>
+    </div>
+<br>
+    <label id="input-label">Input text</label>
+    <textarea id="input" placeholder="Type or paste text…"></textarea>
+
+    <div class="row">
+      <button class="btn" id="btn-run">Run</button>
+      <button class="btn" id="btn-clear">Clear</button>
+    </div><br>
+<label id="input-label">Output:</label>
+    <div class="out">
+      <div><b>Hex:</b> <span id="out-hex"></span></div>
+      <div><b>Base64:</b> <span id="out-b64"></span></div>
+      <div><b>URL:</b> <span id="out-url"></span></div>
+    </div>
+  </div>
+
+<script>
+const $ = s => document.querySelector(s);
+const input = $('#input'), outHex=$('#out-hex'), outB64=$('#out-b64'), outURL=$('#out-url');
+let mode="encode";
+
+// ================= FULL TABLES =================
+function buildTable(base, map) {
+  const arr=[...Array(128).keys()];
+  for (let i=0;i<128;i++) arr.push(map[i]??0xFFFD);
+  return arr;
+}
+
+// From official code page docs
+const tables = {
+  "windows-1251": buildTable(128, [
+    0x0402,0x0403,0x201A,0x0453,0x201E,0x2026,0x2020,0x2021,
+    0x20AC,0x2030,0x0409,0x2039,0x040A,0x040C,0x040B,0x040F,
+    0x0452,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,
+    0x0000,0x2122,0x0459,0x203A,0x045A,0x045C,0x045B,0x045F,
+    0x00A0,0x040E,0x045E,0x0408,0x00A4,0x0490,0x00A6,0x00A7,
+    0x0401,0x00A9,0x0404,0x00AB,0x00AC,0x00AD,0x00AE,0x0407,
+    0x00B0,0x00B1,0x0406,0x0456,0x0491,0x00B5,0x00B6,0x00B7,
+    0x0451,0x2116,0x0454,0x00BB,0x0458,0x0405,0x0455,0x0457,
+    0x0410,0x0411,0x0412,0x0413,0x0414,0x0415,0x0416,0x0417,
+    0x0418,0x0419,0x041A,0x041B,0x041C,0x041D,0x041E,0x041F,
+    0x0420,0x0421,0x0422,0x0423,0x0424,0x0425,0x0426,0x0427,
+    0x0428,0x0429,0x042A,0x042B,0x042C,0x042D,0x042E,0x042F,
+    0x0430,0x0431,0x0432,0x0433,0x0434,0x0435,0x0436,0x0437,
+    0x0438,0x0439,0x043A,0x043B,0x043C,0x043D,0x043E,0x043F,
+    0x0440,0x0441,0x0442,0x0443,0x0444,0x0445,0x0446,0x0447,
+    0x0448,0x0449,0x044A,0x044B,0x044C,0x044D,0x044E,0x044F
+  ]),
+  "windows-1252": buildTable(128, [
+    0x20AC,0xFFFD,0x201A,0x0192,0x201E,0x2026,0x2020,0x2021,
+    0x02C6,0x2030,0x0160,0x2039,0x0152,0xFFFD,0x017D,0xFFFD,
+    0xFFFD,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,
+    0x02DC,0x2122,0x0161,0x203A,0x0153,0xFFFD,0x017E,0x0178,
+    0x00A0,0x00A1,0x00A2,0x00A3,0x00A4,0x00A5,0x00A6,0x00A7,
+    0x00A8,0x00A9,0x00AA,0x00AB,0x00AC,0x00AD,0x00AE,0x00AF,
+    0x00B0,0x00B1,0x00B2,0x00B3,0x00B4,0x00B5,0x00B6,0x00B7,
+    0x00B8,0x00B9,0x00BA,0x00BB,0x00BC,0x00BD,0x00BE,0x00BF,
+    0x00C0,0x00C1,0x00C2,0x00C3,0x00C4,0x00C5,0x00C6,0x00C7,
+    0x00C8,0x00C9,0x00CA,0x00CB,0x00CC,0x00CD,0x00CE,0x00CF,
+    0x00D0,0x00D1,0x00D2,0x00D3,0x00D4,0x00D5,0x00D6,0x00D7,
+    0x00D8,0x00D9,0x00DA,0x00DB,0x00DC,0x00DD,0x00DE,0x00DF,
+    0x00E0,0x00E1,0x00E2,0x00E3,0x00E4,0x00E5,0x00E6,0x00E7,
+    0x00E8,0x00E9,0x00EA,0x00EB,0x00EC,0x00ED,0x00EE,0x00EF,
+    0x00F0,0x00F1,0x00F2,0x00F3,0x00F4,0x00F5,0x00F6,0x00F7,
+    0x00F8,0x00F9,0x00FA,0x00FB,0x00FC,0x00FD,0x00FE,0x00FF
+  ]),
+  "windows-1254": buildTable(128, [
+    0x20AC,0xFFFD,0x201A,0x0192,0x201E,0x2026,0x2020,0x2021,
+    0x02C6,0x2030,0x0160,0x2039,0x0152,0xFFFD,0xFFFD,0xFFFD,
+    0xFFFD,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,
+    0x02DC,0x2122,0x0161,0x203A,0x0153,0xFFFD,0xFFFD,0xFFFD,
+    0x00A0,0x00A1,0x00A2,0x00A3,0x00A4,0x00A5,0x00A6,0x00A7,
+    0x00A8,0x00A9,0x00AA,0x00AB,0x00AC,0x00AD,0x00AE,0x00AF,
+    0x00B0,0x00B1,0x00B2,0x00B3,0x00B4,0x00B5,0x00B6,0x00B7,
+    0x00B8,0x00B9,0x00BA,0x00BB,0x00BC,0x00BD,0x00BE,0x00BF,
+    0x00C0,0x00C1,0x00C2,0x00C3,0x00C4,0x00C5,0x00C6,0x00C7,
+    0x00C8,0x00C9,0x00CA,0x00CB,0x00CC,0x00CD,0x00CE,0x00CF,
+    0x011E,0x00D1,0x00D2,0x00D3,0x00D4,0x00D5,0x00D6,0x00D7,
+    0x00D8,0x00D9,0x00DA,0x00DB,0x00DC,0x0130,0x015E,0x00DF,
+    0x00E0,0x00E1,0x00E2,0x00E3,0x00E4,0x00E5,0x00E6,0x00E7,
+    0x00E8,0x00E9,0x00EA,0x00EB,0x00EC,0x00ED,0x00EE,0x00EF,
+    0x011F,0x00F1,0x00F2,0x00F3,0x00F4,0x00F5,0x00F6,0x00F7,
+    0x00F8,0x00F9,0x00FA,0x00FB,0x00FC,0x0131,0x015F,0x00FF
+  ])
+};
+
+// Build reverse lookup
+const reverseTables = {};
+for (let enc in tables) {
+  reverseTables[enc] = {};
+  tables[enc].forEach((cp,i)=>{ reverseTables[enc][cp]=i; });
+}
+
+ function toHex(uint8){ 
+    return Array.from(uint8)
+      .map(b => '=' + b.toString(16).toUpperCase().padStart(2,'0'))
+      .join('');
+  }
+
+  function toB64(uint8){ 
+    return btoa(String.fromCharCode(...uint8)); 
+  }
+
+  function toURL(uint8){ 
+    return Array.from(uint8)
+      .map(b => '%' + b.toString(16).toUpperCase().padStart(2,'0'))
+      .join('');
+  }
+
+  function encodeCustom(text,enc){
+    if(enc.startsWith("utf-")) return new TextEncoder(enc).encode(text);
+    const rev=reverseTables[enc];
+    const arr=[];
+    for(let ch of text){
+      const cp=ch.codePointAt(0);
+      arr.push(rev[cp]!==undefined?rev[cp]:0x3F); // ? if missing
+    }
+    return new Uint8Array(arr);
+  }
+
+  function decodeCustom(bytes,enc){
+    if(enc.startsWith("utf-")) return new TextDecoder(enc).decode(bytes);
+    const tbl=tables[enc];
+    return Array.from(bytes).map(b=>String.fromCodePoint(tbl[b]||0x3F)).join('');
+  }
+
+  function run(){
+    const encSel=$('#encoding').value;
+    const text=input.value;
+
+    try{
+      if(mode==="encode"){
+        const bytes=encodeCustom(text,encSel);
+        outHex.textContent=toHex(bytes);
+        outB64.textContent=toB64(bytes);
+        outURL.textContent=toURL(bytes);
+      }else{
+        let bytes;
+        if(text.trim().startsWith("=")){ 
+          // decode "=XX=YY..." format
+          const arr=(text.match(/=[0-9A-Fa-f]{2}/g)||[])
+            .map(x=>parseInt(x.slice(1),16));
+          bytes=new Uint8Array(arr);
+        }else if(text.trim().startsWith("%")){
+          const arr=text.match(/%[0-9A-Fa-f]{2}/g)||[];
+          bytes=new Uint8Array(arr.map(x=>parseInt(x.slice(1),16)));
+        }else{
+          const bin=atob(text); 
+          bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+        }
+        const decoded=decodeCustom(bytes,encSel);
+        outHex.textContent=decoded;
+        outB64.textContent=decoded;
+        outURL.textContent=decoded;
+      }
+    }catch(e){
+      outHex.textContent=outB64.textContent=outURL.textContent="❌ Error: "+e;
+    }
+  
+}
+
+$('#btn-run').addEventListener('click',run);
+$('#btn-clear').addEventListener('click',()=>{input.value=""; outHex.textContent=outB64.textContent=outURL.textContent="";});
+$('#mode-encode').addEventListener('click',()=>{mode="encode"; $('#mode-encode').classList.add('active'); $('#mode-decode').classList.remove('active');});
+$('#mode-decode').addEventListener('click',()=>{mode="decode"; $('#mode-decode').classList.add('active'); $('#mode-encode').classList.remove('active');});
+</script>
+  <div class="credit">
+     Created by <span>Kailash</span>
+  </div>
+</body>
+</html>

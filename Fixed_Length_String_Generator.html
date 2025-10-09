@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/128/164/164691.png">
+  <title>Random Word Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-image: url('like.webp');
+    }
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: -1; /* Send video to the background */
+      opacity: 1; /* Optional: darken for contrast */
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 10px black, 0 0 20px black;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .container {
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      padding: 20px;
+    }
+
+    .left{
+      width: 25%;
+      background: transparent;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 5px 10px black;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .right {
+      width: 75%;
+      background: transparent;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 5px 10px black;
+      transition: transform 0.2s ease-in-out;
+    }
+    .left:hover,
+    .right:hover {
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+      transform: translateY(-2px);
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 1rem;
+      font-size: 18px;
+      display: block;
+      color: white;
+      text-shadow: 0 0 20px black;
+    }
+
+    input[type="number"], input[type="text"], select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      background-color: #f2f3f4;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid black;
+    }
+
+    textarea {
+      width: 100%;
+      height: 650px;
+      margin-top: 1rem;
+      resize: vertical, horizontal;
+      background-color: #f2f3f4;
+      box-sizing: border-box;
+      font-family: monospace;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid black;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(to right, black, white);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: linear-gradient(to right, white, black);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <video autoplay muted loop playsinline id="bg-video">
+  	<source src="bg.mp4" type="video/mp4">
+  </video>
+  <h1>Fixed Length String & Nouns Generator</h1>
+    
+  <div class="container">
+    <div class="left">
+      <label for="numLines">Number of Lines:</label>
+      <input type="number" id="numLines" min="1" placeholder="e.g. 30" />
+
+      <label for="StringLengths">String Lengths:</label>
+      <input type="text" id="StringLengths" placeholder="e.g. 8,4,3,5,12 or 65" />
+
+      <label for="separator">Separator:</label>
+      <input type="text" id="separator" placeholder="e.g. / or - or ##__#__" />
+
+      <label for="charSet">Character Set:</label>
+      <select id="charSet">
+        <option value="select">-- Select Charset --</option>  
+        <option value="random">Random (Letters + Digits)</option>
+        <option value="letters">Only Letters</option>
+        <option value="uppercase">Only Uppercase</option>
+        <option value="lowercase">Only Lowercase</option>
+        <option value="digits">Only Numbers</option>
+        <option value="uppercase_digits">Uppercase + Digits</option>
+        <option value="lowercase_digits">Lowercase + Digits</option>
+	<option value="hex_group">Hex Group</option>
+        <option value="noun">Nouns</option>
+      </select>
+
+      <button onclick="generateLines()">Generate</button>
+      <p id="errorMsg" style="color: red;"></p>
+    </div>
+
+    <div class="right">
+      <label for="output">Generated Output:</label>
+      <textarea id="output" readonly></textarea>
+      <button onclick="copyToClipboard()">Copy Output</button>
+    </div>
+  </div>
+
+  <script>
+    let nounsList = [];
+    let nounPool = [];
+    let nounUsageMap = new Map(); // Tracks last used generation for each word
+    let currentGeneration = 1;
+
+    // Load nouns.txt
+    fetch('nouns.txt')
+      .then(response => response.text())
+      .then(text => {
+        nounsList = text.split('\n').map(w => w.trim()).filter(Boolean);
+        nounPool = [...nounsList];
+      });
+
+    function getCharset(option) {
+      switch (option) {
+        case 'uppercase': return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        case 'lowercase': return 'abcdefghijklmnopqrstuvwxyz';
+        case 'digits': return '0123456789';
+        case 'letters': return 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        case 'uppercase_digits': return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        case 'lowercase_digits': return 'abcdefghijklmnopqrstuvwxyz0123456789';
+        case 'random': return 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	case 'hex_group': return 'hex_group';
+        case 'noun': return 'noun';
+        default: return '';
+      }
+    }
+
+    function getRandomString(length, charset) {
+      if (charset === 'noun') {
+        // Eligible: match length & either never used or used 4+ generations ago
+        const eligible = nounPool.filter(word =>
+          word.length === length &&
+          (!nounUsageMap.has(word) || currentGeneration - nounUsageMap.get(word) >= 4)
+        );
+  
+        if (eligible.length === 0) {
+          return 'x'.repeat(length); // fallback if no eligible words
+        }
+  
+        const word = eligible[Math.floor(Math.random() * eligible.length)];
+        nounUsageMap.set(word, currentGeneration);
+        return word;
+      } else {
+        let result = '';
+        for (let i = 0; i < length; i++) {
+          result += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        return result;
+      }
+    }
+
+    function getRandomHexGroup(minLen = 6, maxLen = 10) {
+  	const len = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
+  	const hex = '0123456789abcdef';
+  	let result = '';
+  	for (let i = 0; i < len; i++) {
+    		result += hex[Math.floor(Math.random() * hex.length)];
+  	}
+  	return result;
+    }
+
+    function generateLine(StringLengths, separator, charset) {
+      if (charset === 'hex_group') {
+    	return Array.from({ length: 5 }, () => getRandomHexGroup()).join(separator);
+      } else {
+    	return StringLengths.map(len => getRandomString(len, charset)).join(separator);
+      }
+    }
+
+    function generateLines() {
+      const numLines = parseInt(document.getElementById('numLines').value);
+      const StringLengthsStr = document.getElementById('StringLengths').value;
+      const separator = document.getElementById('separator').value || '';
+      const charSetOption = document.getElementById('charSet').value;
+
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.textContent = '';
+
+      if (!numLines || numLines < 1 || !StringLengthsStr || charSetOption === 'select') {
+        errorMsg.textContent = 'Please fill all required fields correctly.';
+        return;
+      }
+
+      const StringLengths = StringLengthsStr.split(',')
+        .map(str => parseInt(str.trim()))
+        .filter(Number.isFinite);
+
+      const charset = getCharset(charSetOption);
+
+      if (charSetOption === 'noun' && nounsList.length === 0) {
+        errorMsg.textContent = 'Noun list not loaded. Ensure nouns.txt is available.';
+        return;
+      }
+
+      const output = Array.from({ length: numLines }, () =>
+        generateLine(StringLengths, separator, charset)
+      ).join('\n');
+
+      document.getElementById('output').value = output;
+    }
+    function copyToClipboard() {
+      const outputArea = document.getElementById('output');
+      outputArea.select();
+      outputArea.setSelectionRange(0, 99999); // For mobile devices
+      document.execCommand('copy');
+      alert('Copied to clipboard!');
+    }
+  </script>
+</body>
+</html>

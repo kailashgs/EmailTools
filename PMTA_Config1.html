@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="gear.webp">
+  <title>Virtual MTA Generator</title>
+
+  <style>
+    /* Reset default box model */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Roboto', sans-serif;
+      background-image: url('like.webp');
+      color: #2c3e50;
+      padding: 1rem;
+      line-height: 1.6;
+    }
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: -1; /* Send video to the background */
+      opacity: 1; /* Optional: darken for contrast */
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      padding: 15px;
+      margin: 0;
+      text-shadow: 0 0 10px black, 0 0 20px black;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .container {
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      padding: 5px;
+    }
+
+    /* Panels */
+    .form-section{
+      width: 25%;
+      background: translucent;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 5px 10px black;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .output-section {
+      width: 75%;
+      background: translucent;
+      padding: 1rem;
+      border-radius: 1rem;
+      box-shadow: 0 5px 10px black;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .form-section:hover,
+    .output-section:hover {
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+      transform: translateY(-2px);
+    }
+
+    /* Labels & inputs */
+    label {
+      display: block;
+      margin-top: 1.2rem;
+      font-weight: 600;
+      font-size: 18px;
+      color: #ffffff;
+      text-shadow: 0 0 10px black, 0 0 20px black;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 0.4rem;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      transition: border-color 0.3s ease;
+      background-color: #f2f3f4;
+      border: 1px solid black;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #3b82f6;
+      outline: none;
+    }
+
+    /* Button */
+    button {
+      margin-top: 1rem;
+      width: 100%;
+      padding: 0.9rem;
+      background: linear-gradient(to right, black, white);
+      color: white;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(to right, white, black);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    }
+
+    /* Output */
+    textarea#output {
+      background-color: #f2f3f4;
+      width: 100%;
+      height: 650px;
+      box-sizing: border-box;
+      font-family: monospace;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <video autoplay muted loop playsinline id="bg-video">
+  	<source src="bg.mp4" type="video/mp4">
+  </video>
+  <h1>Virtual MTA Generator</h1>
+
+  <div class="container">
+    <div class="form-section">
+      <label for="inputData">Enter IP|Domain pairs (one per line):</label>
+      <textarea id="inputData" rows="10" placeholder="0.0.0.0|example.com&#10;1.1.1.1|tory.mason.miller"></textarea>
+
+      <label for="vmtaName">VMTA Name:</label>
+      <input type="text" id="vmtaName" placeholder="PMTA Name" />
+
+      <label for="keyName">Key Name:</label>
+      <input type="text" id="keyName" placeholder="Selector" />
+
+      <label for="domainKey">Enter Domain:</label>
+      <input type="text" id="domainKey" placeholder="Enter the Domain" />
+
+      <label for="keyPath">Key Path:</label>
+      <select id="keyPath">
+        <option value="select">--Select Path--</option>
+        <option value="/var/pmtadomain-keys">/var/pmtadomain-keys</option>
+        <option value="/etc/pmta/domain-keys/">/etc/pmta/domain-keys/</option>
+      </select>
+
+      <button onclick="generateMTA()">Generate MTA Blocks</button>
+    </div>
+
+    <div class="output-section">
+      <label>Generated Output:</label>
+      <textarea id="output" readonly></textarea>
+      <button onclick="copyToClipboard()">Copy Output</button>
+    </div>
+  </div>
+
+<script>
+  function generateMTA() {
+    const inputData = document.getElementById('inputData').value.trim().split('\n');
+    const vmtaName = document.getElementById('vmtaName').value.trim();
+    const keyName = document.getElementById('keyName').value.trim();
+    const domainKey = document.getElementById('domainKey').value.trim();
+    const keyPath = document.getElementById('keyPath').value.trim();
+
+    const result = inputData.map(line => {
+      const [ip, host] = line.split('|').map(s => s.trim());
+
+      // If no host is given, fallback to reverse-IP like "11.60.14.197.in-addr.arpa"
+      const fallbackHost = ip.split('.').reverse().join('.') + ".in-addr.arpa";
+      const finalHost = host || fallbackHost;
+
+      // Check if keyName, domainKey, and keyPath are provided
+      if (!keyName || !domainKey || keyPath === "select" || !keyPath) {
+        // Generate block without domain-key
+        return `<virtual-mta ${vmtaName}_${ip}>\nsmtp-source-host ${ip} ${finalHost}\n</virtual-mta>`;
+      } else {
+        // Generate block with domain-key
+        return `<virtual-mta ${vmtaName}_${ip}>\nsmtp-source-host ${ip} ${finalHost}\ndomain-key ${keyName},${domainKey},${keyPath}/${keyName}.${domainKey}.pem\n</virtual-mta>`;
+      }
+    }).join('\n');
+
+    document.getElementById('output').textContent = result;
+  }
+
+  function copyToClipboard() {
+    const outputArea = document.getElementById('output');
+    outputArea.select();
+    outputArea.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand('copy');
+    alert('Copied to clipboard!');
+  }
+</script>
+
+</body>
+</html>

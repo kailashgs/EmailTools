@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/128/10006/10006816.png">
+  <title>Dynamic Hex Block Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-image: url('like.webp');
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      padding: 20px;
+      color: #fff;
+      text-shadow: 0 0 10px black;
+    }
+    .container {
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      padding: 20px;
+    }
+    .left {
+      width: 25%;
+      background: transparent;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.2);
+    }
+    .right {
+      width: 75%;
+      background: transparent;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.2);
+    }
+    .left:hover,
+    .right:hover {
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+      transform: translateY(-2px);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="number"], input[type="text"] {
+      width: 45%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-right: 5%;
+      background: #f2f3f4;
+      border: 1px solid #333;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    .range-container {
+      margin-top: 10px;
+    }
+    .range-group {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .range-group span {
+      width: 20%;
+      text-align: center;
+      line-height: 32px;
+    }
+    textarea {
+      width: 97%;
+      height: 600px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      background: #f2f3f4;
+      color: #000;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #333;
+      resize: vertical;
+    }
+    button {
+      margin-top: 15px;
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(to right, black, white);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: linear-gradient(to right, white, black);
+      color: black;
+      box-shadow: 0 0 10px #fff;
+    }
+    h2 {
+      color: white;
+      text-shadow: 0 0 15px black;
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    @media (max-width: 768px) {
+      .container { flex-direction: column; }
+      .left, .right { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Dynamic Hex Block & Random Code Generator</h1>
+  <div class="container">
+    <div class="left">
+      <h2>Dynamic Hex Block Generator</h2>
+      <label for="numLines">Number of Lines:</label>
+      <input type="number" id="numLines" placeholder="e.g. 40" />
+      <label for="sep">Separator:</label>
+      <input type="text" id="sep" placeholder="e.g. / or - or ##__#__" />
+
+      <label for="numBlocks">Number of Blocks:</label>
+      <input type="number" id="numBlocks" placeholder="e.g. 5" />
+
+      <button onclick="createBlockInputs()">Set Blocks</button>
+
+      <div id="blockRanges" class="range-container"></div>
+
+      <button onclick="generateHexBlocks()">Generate Hex Blocks</button>
+
+      <h2>Random Code Generator</h2>
+      <label for="numCodes">Number of Codes:</label>
+      <input type="number" id="numCodes" placeholder="e.g. 50" min="1">
+      <label for="codeSep">Code Separator:</label>
+      <input type="text" id="codeSep" placeholder="e.g. / or - or ##__#__">
+      <button onclick="generateCodes()">Generate Codes</button>
+    </div>
+
+    <div class="right">
+      <label for="output">Generated Output:</label>
+      <textarea id="output" readonly></textarea>
+      <button onclick="copyToClipboard()">Copy Output</button>
+    </div>
+  </div>
+
+  <script>
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateHex(length) {
+      const chars = '0123456789abcdef';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    function createBlockInputs() {
+      const numBlocks = parseInt(document.getElementById('numBlocks').value) || 0;
+      const container = document.getElementById('blockRanges');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= numBlocks; i++) {
+        const div = document.createElement('div');
+        div.className = 'range-group';
+        div.innerHTML = `
+          <span>Block ${i}</span>
+          <input type="number" id="b${i}min" placeholder="Min" value="6" />
+          <input type="number" id="b${i}max" placeholder="Max" value="10" />
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    function generateCustomLine(ranges, sep) {
+      return ranges.map(r => generateHex(randomInt(r.min, r.max))).join(sep);
+    }
+
+    function generateHexBlocks() {
+      const numLines = parseInt(document.getElementById('numLines').value) || 40;
+      const numBlocks = parseInt(document.getElementById('numBlocks').value) || 0;
+      const sep = document.getElementById('sep').value;
+
+      if (numBlocks === 0) {
+        alert("Please set the number of blocks and click 'Set Blocks'");
+        return;
+      }
+
+      const ranges = [];
+      for (let i = 1; i <= numBlocks; i++) {
+        const minVal = parseInt(document.getElementById(`b${i}min`).value);
+        const maxVal = parseInt(document.getElementById(`b${i}max`).value);
+        if (isNaN(minVal) || isNaN(maxVal) || minVal > maxVal) {
+          alert(`Invalid range for Block ${i}`);
+          return;
+        }
+        ranges.push({ min: minVal, max: maxVal });
+      }
+
+      let output = '';
+      for (let i = 0; i < numLines; i++) {
+        output += generateCustomLine(ranges, sep) + '\n';
+      }
+
+      document.getElementById('output').value = output.trim();
+    }
+    function randomString(len) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      return Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    }
+
+    function generateCode(separator) {
+      return randomString(5) + separator + randomString(28);
+    }
+
+    function generateAlternateCode(separator) {
+      return randomString(10) + separator + randomString(5) + separator + Math.floor(1000000000 + Math.random() * 9000000000);
+    }
+
+    function generateLongCode() {
+      return randomString(50);
+    }
+
+    function generateCodes() {
+      const numCodes = parseInt(document.getElementById('numCodes').value);
+      const separator = document.getElementById('codeSep').value || '';
+      const codes = [];
+
+      for (let i = 0; i < numCodes; i++) {
+        const choice = [() => generateCode(separator), () => generateAlternateCode(separator), generateLongCode][Math.floor(Math.random() * 3)];
+        codes.push(choice());
+      }
+
+      document.getElementById('output').value = codes.join('\n');
+    }
+    function copyToClipboard() {
+      const outputArea = document.getElementById('output');
+      outputArea.select();
+      outputArea.setSelectionRange(0, 99999); // For mobile devices
+      document.execCommand('copy');
+      alert('Copied to clipboard!');
+    }
+    function copyToClipboard() {
+      const outputArea = document.getElementById('output');
+      outputArea.select();
+      outputArea.setSelectionRange(0, 99999); // For mobile devices
+      document.execCommand('copy');
+      alert('Copied to clipboard!');
+    }
+  </script>
+</body>
+</html>
