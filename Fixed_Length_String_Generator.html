@@ -167,7 +167,7 @@
     let currentGeneration = 1;
 
     // Load nouns.txt
-    fetch('nouns.txt')
+    fetch('asset/nouns.txt')
       .then(response => response.text())
       .then(text => {
         nounsList = text.split('\n').map(w => w.trim()).filter(Boolean);
