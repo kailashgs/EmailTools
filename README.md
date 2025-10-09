@@ -83,4 +83,8 @@ Created by Kailash
 This project is licensed under the MIT License.
 ---
 
-👉 Do you want me to also make this **README auto-generate a GitHub Pages link** so you can directly host this site from the repo and link it in the README?
+## 🌐 Live Demo
+
+[Click here to view the website](https://kailashgs.github.io/EmailTools/index.html) (or) [Click here](https://emailtools.wuaze.com/)
+
+
