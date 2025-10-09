@@ -85,6 +85,10 @@ This project is licensed under the MIT License.
 
 ## 🌐 Live Demo
 
-[Click here to view the website](https://kailashgs.github.io/EmailTools/index.html) (or) [Click here](https://emailtools.wuaze.com/)
+[Click here to view the website](https://kailashgs.github.io/EmailTools/index.html)
+
+## 🌐 Hosted Site
+
+[https://emailtools.wuaze.com/](https://emailtools.wuaze.com/)
 
 
