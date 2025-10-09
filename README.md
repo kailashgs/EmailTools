@@ -26,7 +26,7 @@ It provides an easy-to-use interface with multiple tools for developers, email m
 
 ## 🖼️ Preview
 
-![Website Preview](./screenshot.png)
+![Website Preview](./asset/screenshot.png)
 
 ---
 
